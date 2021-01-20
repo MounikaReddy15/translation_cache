@@ -23,3 +23,23 @@ Eg:  {
     "target":"Spanish"
 }
 ```
+
+#### To run on your localhost:
+
+```
+$ https://github.com/MounikaReddy15/translation_cache.git
+$ cd translation-cache-api
+$ npm start to run the server
+```
+
+#### To test the api we used Mocha a javascript framework for Node.js
+
+#### Chai is the assertion library
+
+#### Chai HTTP addon allows Chai library to easily use assertions on HTTP requests
+
+To run the test:
+
+```
+npm test
+```
