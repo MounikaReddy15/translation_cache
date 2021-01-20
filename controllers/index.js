@@ -1,16 +1,9 @@
 const qs = require("qs");
 const redis = require("redis");
+// create redis client
 const REDIS_PORT = process.env.PORT || 6379;
 const client = redis.createClient(REDIS_PORT);
 const fetch = require("node-fetch");
-
-let localeObj = {
-  te: null,
-  kn: null,
-  hi: null,
-};
-
-let langAry = ["te", "kn", "hi"];
 
 function getISOCode(lang) {
   if (lang == "Afrikaans") {
@@ -207,26 +200,22 @@ function getISOCode(lang) {
 // };
 
 module.exports.translate = function (req, res) {
-  // console.log("translateXXXXXXXXXXXX");
-  // console.log(req.body.word, req.body.target);
-  let tl = getISOCode(req.body.target);
-  // console.log(tl, "jjjjjjjjjjjj");
   try {
-    const translation = req.body.word;
-    client.get(translation, (err, data) => {
-      console.log("cacheeeeeeeeee");
+    let tl = getISOCode(req.body.target);
+    let sl = getISOCode(req.body.source);
+    var translate = req.body.word.concat(req.body.target);
+    client.get(translate, (err, data) => {
       if (err) throw err;
       else if (data != null) {
-        // res.send(setResponse(translation, data));
-        console.log("data", data);
         return res.status(200).json({
           translation: data,
         });
       } else {
         const body = {
           q: req.body.word,
-          source: "en",
+          source: sl,
           target: tl,
+          // Tamil,
         };
 
         const qsBody = qs.stringify(body);
@@ -241,7 +230,7 @@ module.exports.translate = function (req, res) {
               "x-rapidapi-key":
                 "efd96d4048msh44f73d6266d5b84p174ac5jsn0b65722b3082",
               "x-rapidapi-host": "google-translate1.p.rapidapi.com",
-              // "Host": X_RAPIDAPI_HOST,
+
               "Content-Length": qsBody.length,
             },
             body: qsBody,
@@ -251,10 +240,14 @@ module.exports.translate = function (req, res) {
           .then((response) => {
             console.log("response from fetch");
             let text = response.data.translations[0].translatedText;
-            client.set(req.body.word, text);
+
+            client.setex(translate, 3600, text);
 
             return res.status(200).json({
-              translation: text,
+              message: "Text Translated!",
+              data: {
+                translation: text,
+              },
             });
           });
       }
