@@ -1,10 +1,13 @@
+// qs library to encode data
 const qs = require("qs");
 const redis = require("redis");
 // create redis client
 const REDIS_PORT = process.env.PORT || 6379;
 const client = redis.createClient(REDIS_PORT);
+// for fetch functionality
 const fetch = require("node-fetch");
 
+// to get locale code of languages
 function getISOCode(lang) {
   if (lang == "Afrikaans") {
     return "af";
@@ -168,42 +171,17 @@ function getISOCode(lang) {
     return "zu";
   } else return null;
 }
-// module.exports.translates = function (req, res) {
-//   try {
-//     console.log("translate", req.body.word);
-//     // const { word } = req.params;
-//     for (var i = 0; i < langAry.length; i++) {
-//       let item = langAry[i];
-//       translate(req.body.word, { from: "en", to: langAry[i] }).then((res) => {
-//         localeObj[item] = "'" + res.text + "'";
-//       });
-//     }
-//   } catch (err) {
-//     res.json({ message: err });
-//   }
-// };
 
-// module.exports.cache = function (req, res, next) {
-//   console.log("cache");
-//   const translation = req.body.word;
-//   client.get(translation, (err, data) => {
-//     if (err) throw err;
-//     if (data != null) {
-//       // res.send(setResponse(translation, data));
-//       return res.status(200).json({
-//         translation: data,
-//       });
-//     } else {
-//       next();
-//     }
-//   });
-// };
-
+// logic to translate the text
 module.exports.translate = function (req, res) {
   try {
+    // target language
     let tl = getISOCode(req.body.target);
+    // source language
     let sl = getISOCode(req.body.source);
+    // to give unique key to redis, concatinating word and source language
     var translate = req.body.word.concat(req.body.target);
+    // getting the text from cache
     client.get(translate, (err, data) => {
       if (err) throw err;
       else if (data != null) {
@@ -215,11 +193,10 @@ module.exports.translate = function (req, res) {
           q: req.body.word,
           source: sl,
           target: tl,
-          // Tamil,
         };
 
         const qsBody = qs.stringify(body);
-
+        // fetch the data from api
         fetch(
           "https://google-translate1.p.rapidapi.com/language/translate/v2",
           {
@@ -240,9 +217,9 @@ module.exports.translate = function (req, res) {
           .then((response) => {
             console.log("response from fetch");
             let text = response.data.translations[0].translatedText;
-
+            // set the traslated text in cache, setex allows us to set duration of the storage
             client.setex(translate, 3600, text);
-
+            // sending the response
             return res.status(200).json({
               message: "Text Translated!",
               data: {
